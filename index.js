@@ -62,20 +62,30 @@ Plugin.prototype.apply = function(compiler) {
       }
 
       var chunks = {};
-      stats.compilation.chunks.map(function(chunk){
-        var files = chunk.files.map(function(file){
-          var F = {name: file};
-          var publicPath = self.options.publicPath || compiler.options.output.publicPath;
-          if (publicPath) {
-            F.publicPath = publicPath + file;
-          }
-          if (compiler.options.output.path) {
-            F.path = path.join(compiler.options.output.path, file);
-          }
-          return F;
+      if (stats.compilation.entrypoints) {
+        stats.compilation.entrypoints.forEach(function (entrypoint) {
+          var files = [];
+          entrypoint.chunks.forEach(function (chunk) {
+            files = files.concat(files, chunk.files.map(function (file) {
+              var A = {name: file};
+              var publicPath = self.options.publicPath || compiler.options.output.publicPath;
+              if (publicPath) {
+                A.publicPath = publicPath + file;
+              }
+              if (compiler.options.output.path) {
+                A.path = path.join(compiler.options.output.path, file);
+              }
+              return A;
+            }));
+          });
+          chunks[entrypoint.options.name] = files.sort(function(a, b) { 
+            return a.name < b.name ? -1 : 1; // Sort by name
+          }).filter(function(file, index, array) {
+            return !index || file.name != array[index - 1].name; // Exclude files that duplicate the preceding item
+          });
         });
-        chunks[chunk.name] = files;
-      });
+      }
+
       var output = {
         status: 'done',
         chunks: chunks
